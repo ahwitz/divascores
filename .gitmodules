@@ -1,0 +1,3 @@
+[submodule "diva.js"]
+	path = diva.js
+	url = http://github.com/DDMAL/diva.js.git
