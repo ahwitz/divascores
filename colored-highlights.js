@@ -1,7 +1,7 @@
 var createModeActive = false;
 var dragActive = false;
-var regions = {};
 var initDragTop, initDragLeft;
+var regions = {};
 
 //credit to http://stackoverflow.com/a/21963136
 var lut = []; for (var i=0; i<256; i++) { lut[i] = (i<16?'0':'')+(i).toString(16); }
@@ -54,7 +54,6 @@ $(document).ready(function() {
 	            $("#drag-div").offset({'top': ev.pageY, 'left':ev.pageX});
 	            $("#drag-div").css('background-color', $('input[name=color]:checked').val());
 
-	            //as you drag, resize it - separate function as we have two document.mousemoves that we need to unbind separately
 	            $(document).on('mousemove', changeDragSize);
 
 	            $(document).on('mouseup', mouseUpHandler);
@@ -109,35 +108,100 @@ $(document).ready(function() {
 		$(document).unbind('mousemove', changeDragSize);
 		$(document).unbind('mouseup', mouseUpHandler);
 
-	    //if this was just a click
+	    //if this wasn't just a click
 	    if ($("#drag-div").width() > 2 && $("#drag-div").height() > 2)
 	    {
-	        //ignore the JSLint warning
-	        var pageIndex = divaInstance.getCurrentPageIndex();
+	        var initLeft = $("#drag-div").offset().left;
+	        var initTop = $("#drag-div").offset().top;
+	        var pageIndex = divaInstance.getPageIndexForPageXYValues(initLeft, initTop);
 	        var divaInnerObj = $("#1-diva-page-" + pageIndex);
 
 	        //left position
-	        var draggedBoxLeft = $("#drag-div").offset().left - divaInnerObj.offset().left;
+	        var draggedBoxLeft = initLeft - divaInnerObj.offset().left;
 	        //translated right position (converted to max zoom level)
 	        var draggedBoxRight = divaInstance.translateToMaxZoomLevel(draggedBoxLeft + $("#drag-div").outerWidth());
 	        //translated left - we needed the original left to get the right translation, so we translate it now
 	        draggedBoxLeft = divaInstance.translateToMaxZoomLevel(draggedBoxLeft);
 
 	        //same vertical
-	        var draggedBoxTop = $("#drag-div").offset().top - divaInnerObj.offset().top;
+	        var draggedBoxTop = initTop - divaInnerObj.offset().top;
 	        var draggedBoxBottom = divaInstance.translateToMaxZoomLevel(draggedBoxTop + $("#drag-div").outerHeight());
 	        draggedBoxTop = divaInstance.translateToMaxZoomLevel(draggedBoxTop);
-
-	        //create the neume
-	        /*if(regions.hasOwnProperty(pageIndex))
-		        regions[pageIndex].push({'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID()});
-			else
-	   			regions[pageIndex] = [{'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID()}];
-			*/
-	   		divaInstance.highlightOnPage(pageIndex, [{'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID()}], $('input[name=color]:checked').val(), "highlight-box");
+	     
+	        //create the highlight
+	   		//divaInstance.highlightOnPage(pageIndex, [{'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID()}], $('input[name=color]:checked').val(), "highlight-box");
+	    
+	   		//save it
+	   		if (regions.hasOwnProperty(pageIndex))
+	   			regions[pageIndex].push({'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID(), 'color': $('input[name=color]:checked').val()});
+	    	else 
+	    		regions[pageIndex] = [{'width': draggedBoxRight - draggedBoxLeft, 'height': draggedBoxBottom - draggedBoxTop, 'ulx': draggedBoxLeft, 'uly': draggedBoxTop, 'divID': genUUID(), 'color': $('input[name=color]:checked').val()}];
+	    	
+	    	redrawFromRegions();
 	    }
 
 	    $("#drag-div").remove();
 	    dragActive = false;
 	};
+
+	$("#save").on('click', function()
+	{	
+		var regionsCopy = regions;
+		var pageBlob = new Blob([JSON.stringify(regionsCopy)], {type: "text/plain;charset=utf-8"}); //create a blob
+
+	    saveAs(pageBlob, "highlights" + new Date().getTime()); //download it! from FileSaver.js
+	});
+
+	$("#load").on('change', function()
+	{
+        var reader = new FileReader();
+		reader.file = document.getElementById("load").files[0];
+
+        //when the file is loaded as text
+        reader.onload = function(e)
+        { 
+            regions = JSON.parse(this.result);
+
+            redrawFromRegions();
+        };
+
+        reader.readAsText(reader.file);
+	});
+
+	var redrawFromRegions = function()
+	{
+		divaInstance.resetHighlights();
+
+		for(pageIndex in regions)
+        {
+    		var regionLength = regions[pageIndex].length;
+    		while(regionLength--)
+    		{
+    			var curRegion = regions[pageIndex][regionLength];
+        		divaInstance.highlightOnPage(pageIndex, [{'width': curRegion['width'], 'height': curRegion['height'], 'ulx': curRegion['ulx'], 'uly': curRegion['uly'], 'divID': curRegion['divID']}], curRegion['color'], "highlight-box");
+    		}
+        }
+
+        $(".highlight-box").on('click', function(e)
+        {
+        	$(e.target).on('click', function(ev)
+        	{
+        		console.log($(ev.target).attr('id'), $(ev.target).parent().attr('data-index'));
+        		var pageIndex = $(ev.target).parent().attr('data-index')
+
+	    		var regionLength = regions[pageIndex].length;
+	    		while(regionLength--)
+	    		{
+	    			var curRegion = regions[pageIndex][regionLength];
+	    			console.log(curRegion.divID, $(ev.target).attr('id'));
+	        		if(curRegion.divID == $(ev.target).attr('id'))
+	        		{
+	        			regions[pageIndex].splice(regionLength, 1); 
+	        			redrawFromRegions();
+	        			break;
+	        		}
+	        	}
+        	});
+        });
+	}
 });
