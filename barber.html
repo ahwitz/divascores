@@ -26,6 +26,7 @@
             }
             </style>
             <script>
+            var divaInstance;
             $(document).on('ready', function(e)
             {
                 $('#diva-wrapper').diva({
@@ -41,7 +42,7 @@
                     enableCanvas: true,
                     enableDownload: true
                 });
-                var divaInstance = $("#diva-wrapper").data('diva');
+                divaInstance = $("#diva-wrapper").data('diva');
                 setup();
             });
             </script>
