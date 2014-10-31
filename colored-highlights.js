@@ -16,21 +16,8 @@ function genUUID()
     lut[d2&0x3f|0x80]+lut[d2>>8&0xff]+'-'+lut[d2>>16&0xff]+lut[d2>>24&0xff]+
     lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff];
 }
-$(document).ready(function() {
-    $('#diva-wrapper').diva({
-        enableAutoHeight: true,
-        enableAutoTitle: false,
-        enableAnnotate: true,
-        enableHighlight: true,
-        fixedHeightGrid: false,
-        verticallyOriented: false,
-        iipServerURL: "http://diva.simssa.ca/fcgi-bin/iipsrv.fcgi",
-        objectData: "debussy.json",
-        imageDir: "/srv/images/debussy",
-        enableCanvas: true,
-        enableDownload: true
-    });
-    var divaInstance = $("#diva-wrapper").data('diva');
+//$(document).ready(function() {
+function setup(){
 	$(document).on('keydown', function(e)
 	{
 		if(e.metaKey)
@@ -186,8 +173,7 @@ $(document).ready(function() {
         {
         	$(e.target).on('click', function(ev)
         	{
-        		console.log($(ev.target).attr('id'), $(ev.target).parent().attr('data-index'));
-        		var pageIndex = $(ev.target).parent().attr('data-index')
+        		var pageIndex = $(ev.target).parent().attr('data-index');
 
 	    		var regionLength = regions[pageIndex].length;
 	    		while(regionLength--)
@@ -203,5 +189,5 @@ $(document).ready(function() {
 	        	}
         	});
         });
-	}
-});
+	};
+}//);
